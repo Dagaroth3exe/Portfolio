@@ -1,36 +1,51 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Rishabh Parashar: Portfolio
 
-## Getting Started
-
-First, run the development server:
+An immersive portfolio built around a 3D "3" emblem. Next.js 16 (App Router), React 19,
+React Three Fiber, GSAP and Lenis.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev     # http://localhost:3000
+npm run build && npm start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Structure
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+app/
+  lib/
+    content.ts        ← ALL copy and data (projects, experience, skills…)
+    logo.ts           ← emblem geometry: single source for SVG + 3D + favicon
+    scene-store.ts    ← shared state between DOM and WebGL (pointer, spin)
+    use-reveals.ts    ← scroll motion vocabulary (data-split / data-reveal / …)
+  components/
+    three/            ← persistent WebGL layer: Emblem, Background shader, Atmosphere
+    sections/         ← Hero, Work (projects), Experience, Skills, About, Contact
+    ui/               ← LogoMark, Magnetic, SectionHead, ProjectCover
+    Transition.tsx    ← slanted route-transition sweeps + <TLink>
+  work/[slug]/        ← statically generated case-study pages
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### How the 3D choreography works
 
-## Learn More
+Each section declares `data-pose="hero|about|…"`. The emblem (`three/Emblem.tsx`) blends
+between the poses in the `DESKTOP` / `MOBILE` tables, based on which section is at the
+middle of the viewport. To change where the emblem sits in a section, edit that section's
+pose there.
 
-To learn more about Next.js, take a look at the following resources:
+### Adding a project
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Add an entry to `projects` in `content.ts`. It appears in the gallery and gets a case-study
+page at `/work/<slug>`. To give it a generative cover, add a branch in
+`ui/ProjectCover.tsx`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Accessibility and performance
 
-## Deploy on Vercel
+- `prefers-reduced-motion`: no smooth scroll, static reveals, and the WebGL scene renders
+  on demand.
+- Three.js is code-split and booted on idle. A flat SVG emblem shows until WebGL is ready
+  (or permanently if WebGL is unavailable).
+- Adaptive DPR (`PerformanceMonitor`), and fewer particles on small screens.
+- Skip link, keyboard-operable menu (Escape closes it), focus styles, ARIA on interactive pieces.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+See `CONTENT_NOTES.md` for content that still needs input.
