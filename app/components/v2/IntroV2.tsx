@@ -18,7 +18,11 @@ import { hero, person } from "../../lib/content";
  * with reduced motion.
  */
 
-const T = { login: 1550, role: 1850, hobby: 2450, hack: 4200, breach: 4450, granted: 4850, end: 5200 };
+const T = { login: 1550, role: 1850, hobby: 3700, hack: 5200, breach: 5450, granted: 5850, end: 6200 };
+/** Role beat (ms after T.role): type "AI ENGINE", stall on dots, crash, erase, retype "DEVELOPER". */
+const R = { dots: 380, crash: 800, erase: 1050, retype: 1250 };
+const ROLE_A = "> AI ENGINE";
+const ROLE_B = "> DEVELOPER";
 const GLITCH = "█▓▒░#%&@$01<>/\\=+*?!";
 
 const POST: string[] = [
@@ -131,9 +135,27 @@ export default function IntroV2() {
   const load = Math.max(0, Math.min(1, (t - loadAt) / (T.login - 120 - loadAt)));
   const BAR = 32;
 
-  // Login
-  const role = `> ${person.role.toUpperCase()}`;
-  const roleN = Math.max(0, Math.min(role.length, Math.floor((t - T.role) / 32)));
+  // Login → role: "AI ENGINE..." stalls, crashes, gets wiped, "DEVELOPER" lands
+  const rt = t - T.role;
+  let roleText = "";
+  let roleState: "" | "is-crash" | "is-land" = "";
+  let roleErr = false;
+  if (rt < R.dots) roleText = ROLE_A.slice(0, Math.max(0, Math.floor(rt / 34)));
+  else if (rt < R.crash) roleText = ROLE_A + ".".repeat(Math.min(3, Math.floor((rt - R.dots) / 120) + 1));
+  else if (rt < R.erase) {
+    const k = (rt - R.crash) / (R.erase - R.crash);
+    roleText = corrupt(ROLE_A + "...", 0.1 + k * 0.5, noise);
+    roleState = "is-crash";
+    roleErr = true;
+  } else if (rt < R.retype) {
+    const full = ROLE_A + "...";
+    const n = Math.max(2, full.length - Math.floor((rt - R.erase) / 12));
+    roleText = full.slice(0, n);
+    roleErr = true;
+  } else {
+    roleText = ROLE_B.slice(0, Math.min(ROLE_B.length, 2 + Math.floor((rt - R.retype) / 34)));
+    if (rt < R.retype + 520) roleState = "is-land";
+  }
 
   // Hobbies
   const visible = stream.filter((s) => s.at <= t);
@@ -185,10 +207,13 @@ export default function IntroV2() {
 
             <div className="mt-[6vh]">
               {/* The name lives in the hero; the boot screen only states the role */}
-              <div className="boot-role">
-                {c(role.slice(0, roleN))}
+              <div className={`boot-role ${roleState}`}>
+                {c(roleText)}
                 {t < T.hobby && <span className="boot-cursor" />}
               </div>
+              {roleErr && (
+                <div className="boot-err mt-3">{c("!! segfault: role.exe — core dumped, rewriting identity")}</div>
+              )}
             </div>
 
             {t >= T.hobby && (

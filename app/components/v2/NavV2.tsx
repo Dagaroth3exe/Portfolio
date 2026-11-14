@@ -41,7 +41,7 @@ export default function NavV2() {
   }, [open]);
 
   return (
-    <header className="fixed inset-x-0 top-0 z-[120] mix-blend-difference text-white">
+    <header className="fixed inset-x-0 top-0 z-[120] border-b border-[var(--line)] bg-[var(--bg)] text-white md:border-0 md:bg-transparent md:mix-blend-difference">
       <a href="#main" className="skip-link">Skip to content</a>
       <nav className="wrap flex h-[var(--nav-h)] items-center justify-between gap-6 mono text-[11px] uppercase tracking-[0.1em]" aria-label="Primary">
         <TLink href={`${base}#home`} className="flex items-center gap-3" aria-label={`${person.name} — home`}>
@@ -77,7 +77,7 @@ export default function NavV2() {
         </div>
       </nav>
       {open && (
-        <ul id="mnav" className="md:hidden wrap pb-6 mono text-sm uppercase tracking-[0.08em] space-y-3">
+        <ul id="mnav" className="md:hidden fixed inset-x-0 bottom-0 top-[var(--nav-h)] wrap overflow-y-auto bg-[var(--bg)] pt-8 pb-10 mono text-lg uppercase tracking-[0.08em] space-y-5">
           {NAV_V2.map((n, i) => (
             <li key={n.id}>
               <TLink href={`${base}#${n.id}`} onClick={() => setOpen(false)} className="flex gap-3">
