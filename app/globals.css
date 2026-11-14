@@ -805,3 +805,5 @@ html.intro-on .boot, .boot.is-out {
   background: var(--bg); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
 }
 .ruler-sound:hover, .ruler-sound[aria-pressed="true"] { color: var(--fg); }
+.ruler-sound[data-state="locked"] { color: var(--bg); background: var(--fg); animation: snd-blink 1.6s steps(1) infinite; }
+@keyframes snd-blink { 50% { opacity: 0.55; } }

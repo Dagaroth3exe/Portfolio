@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "react";
  * Right ruler: same ticks plus a marker reading the current scroll position.
  * Decorative only; updated straight on the DOM to avoid re-rendering on scroll.
  *
- * Sound: crossing a tick plays a short mechanical click (a heavier detent on
+ * Sound: crossing a tick plays a thin knob-detent tick (a double tick on
  * labelled 200px marks), synthesised with Web Audio — rate-limited, desktop
  * only, starts after the first click/key (browser autoplay rules), and can be
  * muted from the toggle on the right ruler (remembered per browser).
@@ -24,7 +24,7 @@ function audio() {
   const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
   if (!AC) return null;
   actx = new AC();
-  noise = actx.createBuffer(1, Math.floor(actx.sampleRate * 0.03), actx.sampleRate);
+  noise = actx.createBuffer(1, Math.floor(actx.sampleRate * 0.015), actx.sampleRate);
   const d = noise.getChannelData(0);
   for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   return actx;
@@ -33,33 +33,32 @@ function click(heavy: boolean) {
   const ac = actx;
   if (!ac || !noise || ac.state !== "running") return;
   const t = ac.currentTime;
-  // Body: a filtered noise snap
-  const src = ac.createBufferSource();
-  src.buffer = noise;
-  src.playbackRate.value = 0.9 + Math.random() * 0.2;
-  const bp = ac.createBiquadFilter();
-  bp.type = "bandpass";
-  bp.frequency.value = heavy ? 1700 : 3200;
-  bp.Q.value = heavy ? 2.5 : 4;
-  const g = ac.createGain();
-  g.gain.setValueAtTime(heavy ? 0.55 : 0.32, t);
-  g.gain.exponentialRampToValueAtTime(0.001, t + (heavy ? 0.035 : 0.018));
-  src.connect(bp).connect(g).connect(ac.destination);
-  src.start(t);
-  src.stop(t + 0.04);
-  // Detent: a tiny pitched knock on major ticks
-  if (heavy) {
-    const o = ac.createOscillator();
-    o.type = "triangle";
-    o.frequency.setValueAtTime(420, t);
-    o.frequency.exponentialRampToValueAtTime(160, t + 0.03);
-    const og = ac.createGain();
-    og.gain.setValueAtTime(0.3, t);
-    og.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
-    o.connect(og).connect(ac.destination);
-    o.start(t);
-    o.stop(t + 0.05);
-  }
+  // Thin, crisp tick like a rotary-encoder / keyboard knob detent:
+  // a few ms of high-passed noise through a narrow resonant peak.
+  const tick = (at: number, freq: number, level: number) => {
+    const src = ac.createBufferSource();
+    src.buffer = noise;
+    src.playbackRate.value = 1.4 + Math.random() * 0.3;
+    const hp = ac.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.value = 3800;
+    const pk = ac.createBiquadFilter();
+    pk.type = "peaking";
+    pk.frequency.value = freq;
+    pk.Q.value = 7;
+    pk.gain.value = 14;
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0.0001, at);
+    g.gain.linearRampToValueAtTime(level, at + 0.0006);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + 0.007);
+    src.connect(hp).connect(pk).connect(g).connect(ac.destination);
+    src.start(at);
+    src.stop(at + 0.012);
+  };
+  const f = 6200 + Math.random() * 500;
+  tick(t, f, heavy ? 0.3 : 0.2);
+  // Detent on labelled marks: a second, slightly lower tick right after
+  if (heavy) tick(t + 0.009, f * 0.72, 0.22);
 }
 
 export default function PageRulers() {
@@ -70,6 +69,9 @@ export default function PageRulers() {
   const marker = useRef<HTMLDivElement>(null);
   const [sound, setSound] = useState(true);
   const soundRef = useRef(true);
+  /** Browsers keep audio locked until a click/tap/key on the page. */
+  const [armed, setArmed] = useState(false);
+  const armedRef = useRef(false);
 
   // Restore the mute choice; unlock audio on the first gesture
   useEffect(() => {
@@ -79,28 +81,43 @@ export default function PageRulers() {
     } catch {}
     soundRef.current = on;
     const id = requestAnimationFrame(() => setSound(on));
+    const EVENTS = ["pointerdown", "pointerup", "touchend", "keydown", "click"] as const;
+    const onState = () => {
+      const running = actx?.state === "running";
+      armedRef.current = running;
+      setArmed(running);
+    };
     const unlock = () => {
       const ac = audio();
-      if (ac && ac.state !== "running") ac.resume().catch(() => {});
+      if (!ac) return;
+      ac.onstatechange = onState;
+      if (ac.state !== "running") ac.resume().then(onState, () => {});
+      else onState();
     };
-    window.addEventListener("pointerdown", unlock);
-    window.addEventListener("keydown", unlock);
+    EVENTS.forEach((e) => window.addEventListener(e, unlock, { capture: true }));
     return () => {
       cancelAnimationFrame(id);
-      window.removeEventListener("pointerdown", unlock);
-      window.removeEventListener("keydown", unlock);
+      EVENTS.forEach((e) => window.removeEventListener(e, unlock, { capture: true }));
     };
   }, []);
 
   const toggle = () => {
-    const next = !soundRef.current;
+    // First press while locked means "turn sound on", never "mute"
+    const next = armedRef.current ? !soundRef.current : true;
     soundRef.current = next;
     setSound(next);
     try {
       localStorage.setItem("ruler-sound", next ? "on" : "off");
     } catch {}
     const ac = audio();
-    if (ac && ac.state !== "running") ac.resume().catch(() => {});
+    if (!ac) return;
+    const confirm = () => {
+      armedRef.current = true;
+      setArmed(true);
+      if (next) click(true); // audible confirmation
+    };
+    if (ac.state !== "running") ac.resume().then(confirm, () => {});
+    else confirm();
   };
 
   useEffect(() => {
@@ -171,11 +188,12 @@ export default function PageRulers() {
           type="button"
           className="ruler-sound"
           onClick={toggle}
-          aria-pressed={sound}
-          aria-label={sound ? "Mute ruler click sound" : "Unmute ruler click sound"}
-          title={sound ? "Ruler clicks: on" : "Ruler clicks: off"}
+          aria-pressed={armed && sound}
+          aria-label={!armed ? "Enable ruler click sound" : sound ? "Mute ruler click sound" : "Unmute ruler click sound"}
+          title={!armed ? "Click to enable sound" : sound ? "Ruler clicks: on" : "Ruler clicks: off"}
+          data-state={!armed ? "locked" : sound ? "on" : "off"}
         >
-          SND {sound ? "●" : "○"}
+          {!armed ? "SND · CLICK" : `SND ${sound ? "●" : "○"}`}
         </button>
       </div>
     </div>
