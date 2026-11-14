@@ -53,7 +53,14 @@ export default function ExperienceLog() {
   useEffect(() => {
     const el = axis.current;
     if (!el) return;
-    const io = new IntersectionObserver(([e]) => e.isIntersecting && setOn(true), { threshold: 0.3 });
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (!e.isIntersecting) return;
+        setOn(true);
+        io.disconnect();
+      },
+      { threshold: 0.3 },
+    );
     io.observe(el);
     return () => io.disconnect();
   }, []);

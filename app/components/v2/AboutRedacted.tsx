@@ -63,7 +63,7 @@ export default function AboutRedacted() {
           <GlitchText text="Personnel file." />
         </h2>
 
-        <div ref={doc} className="doc paper-grain relative mx-auto mt-16 max-w-4xl border border-[var(--line-strong)] bg-[#f3f1ec] px-6 py-10 md:px-14 md:py-14">
+        <div ref={doc} className="doc paper-grain relative mx-auto mt-16 max-w-4xl border border-[var(--line-strong)] bg-[var(--bg-2)] px-6 py-10 md:px-14 md:py-14">
           {/* Release header */}
           <p className="mono text-center text-[10px] uppercase tracking-[0.12em] text-[var(--muted)]">
             Approved for release 2026/11/14 : RP-0003-PORTFOLIO
@@ -74,7 +74,7 @@ export default function AboutRedacted() {
               <p className="text-[var(--muted)]">Subject: {person.name}</p>
             </div>
             {/* Attached photo */}
-            <figure className="relative w-24 shrink-0 rotate-[3deg] border border-[var(--line-strong)] bg-white p-1.5 shadow-[0_8px_18px_rgba(0,0,0,0.12)] md:w-32">
+            <figure className="relative w-24 shrink-0 rotate-[3deg] border border-[var(--line-strong)] bg-[var(--fg)] p-1.5 shadow-[0_8px_18px_rgba(0,0,0,0.5)] md:w-32">
               <span className="absolute -top-3 left-1/2 h-6 w-3 -translate-x-1/2 rounded-full border-2 border-[#777]" aria-hidden="true" />
               <div className="relative aspect-[4/5] overflow-hidden">
                 <Image src="/avatar.jpg" alt={`Photo of ${person.name}`} fill sizes="128px" className="object-cover grayscale contrast-125" />

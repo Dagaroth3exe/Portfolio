@@ -25,6 +25,22 @@ export const hero = {
   /** Sector 3 is an easter egg: MV's hunting ground + his race number */
   kickerTag: "Sector 3",
   statement: ["Build AI", "that actually", "ships."],
+  /**
+   * Shown in the boot intro (rapid stream) and the hero's terminal line.
+   * Only things already stated elsewhere on the site — add more real ones here.
+   */
+  hobbies: [
+    "Motorsport",
+    "Formula 1",
+    "Max Verstappen, Nº 3",
+    "Anime",
+    "Japan",
+    "Evals & benchmarks",
+    "Motion design",
+    "WebGL toys",
+    "Automations",
+    "AI agents",
+  ],
   sub: "On-premise LLM agents, multilingual voice pipelines, and computer vision — from evaluation sets and benchmarks to QA and production. No cloud escape hatch.",
   /** Short proof points shown under the hero — each one checkable. */
   proof: [

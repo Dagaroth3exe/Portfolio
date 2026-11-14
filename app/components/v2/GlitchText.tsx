@@ -67,7 +67,11 @@ export default function GlitchText({
       { threshold: 0.6 },
     );
     io.observe(el);
+    // Replay once the boot intro hands over, so the hero isn't already settled
+    const onIntro = () => run();
+    window.addEventListener("introdone", onIntro);
     return () => {
+      window.removeEventListener("introdone", onIntro);
       io.disconnect();
       cancelAnimationFrame(raf.current);
     };

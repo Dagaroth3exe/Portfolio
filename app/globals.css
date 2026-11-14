@@ -6,14 +6,15 @@
    in the intro beams and in real product footage.
    ========================================================= */
 :root {
-  --bg: #e9e6de;          /* paper */
-  --bg-2: #dfdbd1;        /* card / panel on paper */
-  --fg: #121212;          /* ink */
-  --fg-2: #2b2a28;        /* body text */
-  --muted: #6c695f;
-  --dim: #9c988d;
-  --line: rgba(18, 18, 18, 0.14);
-  --line-strong: rgba(18, 18, 18, 0.32);
+  /* Dark everywhere: the whole site is the hero's terminal */
+  --bg: #0c0c0b;
+  --bg-2: #171715;
+  --fg: #ece9e1;
+  --fg-2: #cfcbc2;
+  --muted: #8d8a82;
+  --dim: #5d5b56;
+  --line: rgba(236, 233, 225, 0.13);
+  --line-strong: rgba(236, 233, 225, 0.3);
 
   --gutter: clamp(1rem, 4vw, 3.5rem);
   --max: 1600px;
@@ -67,7 +68,7 @@
    ========================================================= */
 html {
   background: var(--bg);
-  color-scheme: light;
+  color-scheme: dark;
   -webkit-text-size-adjust: 100%;
 }
 html.lenis, html.lenis body { height: auto; }
@@ -75,7 +76,7 @@ html.lenis, html.lenis body { height: auto; }
 .lenis.lenis-stopped { overflow: hidden; }
 
 body {
-  background: var(--bg);
+  background-color: var(--bg);
   color: var(--fg-2);
   font-family: var(--ff-body), system-ui, sans-serif;
   font-size: 16px;
@@ -85,6 +86,14 @@ body {
   overflow-x: clip;
 }
 html.menu-open body { overflow: hidden; }
+
+/* CRT scanlines over the whole screen (screen-space, like a real monitor) */
+body::after {
+  content: ""; position: fixed; inset: 0; z-index: 150; pointer-events: none; opacity: 0.45;
+  background: repeating-linear-gradient(to bottom, transparent 0 2px, rgba(0, 0, 0, 0.28) 2px 3px);
+}
+@media print { body::after { display: none; } }
+.display { text-shadow: 0 0 14px rgba(236, 233, 225, 0.16); }
 
 ::selection { background: var(--fg); color: var(--bg); }
 
@@ -464,7 +473,7 @@ html.cursor-visible .cursor { opacity: 1; }
 /* Paper grain for printed surfaces */
 .paper-grain { position: relative; isolation: isolate; }
 .paper-grain::after {
-  content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 1; opacity: 0.22; mix-blend-mode: multiply;
+  content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 1; opacity: 0.35; mix-blend-mode: screen; filter: invert(1);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
@@ -584,7 +593,7 @@ html.intro-on .intro2, .intro2.is-out { display: block; position: fixed; inset: 
 .doc-word.is-in { opacity: 1; transform: none; }
 .doc-redact { position: relative; }
 .doc-redact::after {
-  content: ""; position: absolute; left: -0.12em; right: -0.12em; top: 0.18em; bottom: 0.1em; background: #121212;
+  content: ""; position: absolute; left: -0.12em; right: -0.12em; top: 0.18em; bottom: 0.1em; background: var(--fg);
   transform-origin: right center; transition: transform 0.55s steps(7);
 }
 .doc-redact.is-open::after { transform: scaleX(0); }
@@ -628,3 +637,171 @@ html.intro-on .intro2, .intro2.is-out { display: block; position: fixed; inset: 
   100% { clip-path: inset(0 0 0 0); transform: none; filter: none; }
 }
 @media (prefers-reduced-motion: reduce) { .three-egg { animation: none; } }
+
+
+/* ---- Boot intro: monochrome CRT ---- */
+.boot { display: none; }
+html.intro-on .boot, .boot.is-out {
+  display: block; position: fixed; inset: 0; z-index: 200; overflow: hidden;
+  background: #060606; color: #ece9e1; transform-origin: 50% 50%;
+}
+.boot-screen {
+  position: absolute; inset: 0; padding: clamp(18px, 4vw, 56px);
+  font: 400 clamp(11px, 1.05vw, 14px)/1.6 var(--ff-mono), ui-monospace, monospace;
+  text-shadow: 0 0 6px rgba(236, 233, 225, 0.45), 0 0 1px rgba(236, 233, 225, 0.9);
+  animation: boot-flicker 0.14s steps(2) infinite;
+}
+@keyframes boot-flicker { 50% { opacity: 0.93; } }
+.boot-dim { color: #8d8a83; }
+.boot-ok { background: #ece9e1; color: #060606; padding: 0 0.25em; text-shadow: none; }
+.boot-role { font-size: clamp(1.7rem, 5.6vw, 5rem); line-height: 1.05; letter-spacing: 0.04em; color: #f6f4ee; }
+.boot-count { font-size: clamp(1rem, 2vw, 1.6rem); }
+.boot-current { font-size: clamp(1.3rem, 3.6vw, 3.2rem); letter-spacing: -0.01em; min-height: 1.3em; white-space: nowrap; overflow: hidden; }
+.boot-stream { color: #8d8a83; word-break: break-all; max-height: 40vh; overflow: hidden; }
+.boot-cursor {
+  display: inline-block; width: 0.55em; height: 0.95em; margin-left: 0.08em; vertical-align: -0.1em;
+  background: currentColor; box-shadow: 0 0 8px rgba(236, 233, 225, 0.6); animation: boot-blink 0.9s steps(1) infinite;
+}
+@keyframes boot-blink { 50% { opacity: 0; } }
+.boot-scan {
+  position: absolute; inset: 0; pointer-events: none; z-index: 6;
+  background: repeating-linear-gradient(to bottom, transparent 0 2px, rgba(0, 0, 0, 0.38) 2px 3px);
+}
+.boot-scan::after {
+  content: ""; position: absolute; left: 0; right: 0; height: 22vh; top: -22vh;
+  background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.05), transparent);
+  animation: boot-roll 2.6s linear infinite;
+}
+@keyframes boot-roll { to { transform: translateY(130vh); } }
+.boot-vignette { position: absolute; inset: 0; pointer-events: none; z-index: 7; background: radial-gradient(ellipse at center, transparent 52%, rgba(0, 0, 0, 0.8) 100%); }
+.boot-skip { position: absolute; right: clamp(18px, 4vw, 56px); bottom: clamp(14px, 3vw, 36px); z-index: 8; font: 10px/1 var(--ff-mono), monospace; letter-spacing: 0.14em; text-transform: uppercase; color: #6b6964; }
+
+/* Breach */
+.boot.is-hacked .boot-screen { animation: boot-shake 0.08s steps(2) infinite; }
+@keyframes boot-shake {
+  0% { transform: translate(0, 0); }
+  25% { transform: translate(-7px, 2px) skewX(2deg); }
+  50% { transform: translate(6px, -3px); }
+  75% { transform: translate(-3px, 1px) skewX(-3deg); }
+}
+.boot-bar { position: absolute; left: -40px; right: -40px; z-index: 5; pointer-events: none; backdrop-filter: invert(1) contrast(1.4); -webkit-backdrop-filter: invert(1) contrast(1.4); }
+.boot-alert { position: absolute; inset: 0; z-index: 9; display: grid; place-items: center; pointer-events: none; }
+.boot-alert-box {
+  font: 600 clamp(1.1rem, 3.2vw, 2.6rem)/1.15 var(--ff-mono), monospace; letter-spacing: 0.06em; text-align: center;
+  background: #ece9e1; color: #060606; padding: 0.6em 1em; outline: 2px solid #ece9e1; outline-offset: 6px;
+  animation: boot-alert-in 0.18s steps(3) both;
+}
+@keyframes boot-alert-in { from { clip-path: inset(48% 0 48% 0); } to { clip-path: inset(0); } }
+
+/* Tube off: flash, collapse to a line, then to a point */
+.boot.is-out { animation: boot-off 0.6s cubic-bezier(0.7, 0, 0.3, 1) forwards; }
+@keyframes boot-off {
+  0% { transform: none; filter: brightness(1); }
+  20% { filter: brightness(3) contrast(1.4); }
+  60% { transform: scale(1, 0.004); filter: brightness(5); }
+  100% { transform: scale(0, 0.004); filter: brightness(6); opacity: 0.2; }
+}
+
+/* Hero terminal chrome */
+.crt-scan {
+  position: absolute; inset: 0; pointer-events: none; z-index: 1; opacity: 0.5;
+  background: repeating-linear-gradient(to bottom, transparent 0 2px, rgba(0, 0, 0, 0.28) 2px 3px);
+}
+.crt-glow { text-shadow: 0 0 10px rgba(236, 233, 225, 0.22); }
+.term-cursor { display: inline-block; width: 0.5em; height: 0.92em; margin-left: 0.06em; vertical-align: -0.08em; background: currentColor; animation: boot-blink 1s steps(1) infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .boot-screen, .boot-scan::after, .term-cursor, .boot-cursor { animation: none; }
+}
+
+/* ---- Edge rulers (replace the background grid) ---- */
+.page-rulers { display: none; }
+@media (min-width: 1024px) {
+  .page-rulers { display: block; }
+  .ruler {
+    position: fixed; top: 0; bottom: 0; width: 22px; z-index: 40; pointer-events: none;
+    --t: rgba(236, 233, 225, 0.22); --T: rgba(236, 233, 225, 0.5);
+    background-image:
+      linear-gradient(to bottom, var(--T) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--t) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--t) 1px, transparent 1px);
+    background-size: 14px 200px, 9px 50px, 4px 10px;
+    background-repeat: repeat-y;
+    background-position-y: var(--ruler-y, 0px);
+  }
+  .ruler--left { left: 0; border-right: 1px solid var(--line); background-position-x: right; }
+  .ruler--right { right: 0; border-left: 1px solid var(--line); background-position-x: left; }
+  .ruler-labels { position: absolute; inset: 0; overflow: hidden; }
+  .ruler-labels span {
+    position: absolute; left: 2px; transform: translateY(4px) ; writing-mode: vertical-rl;
+    font: 500 8px/1 var(--ff-mono), monospace; letter-spacing: 0.08em; color: var(--muted);
+  }
+  .ruler-marker { position: absolute; left: -1px; right: 0; height: 0; transition: top 0.12s linear; }
+  .ruler-marker::before {
+    content: ""; position: absolute; left: 0; top: -5px; border: 5px solid transparent; border-left: 7px solid var(--fg);
+  }
+  .ruler-marker span {
+    position: absolute; right: 26px; top: -8px; white-space: nowrap; padding: 2px 6px;
+    font: 500 9px/1.3 var(--ff-mono), monospace; letter-spacing: 0.1em; color: var(--bg); background: var(--fg);
+  }
+}
+
+
+/* ---- Glyph inspector name (hero) ---- */
+.glyph-name { display: flex; flex-direction: column; color: var(--fg); line-height: 0; }
+.glyph-line { display: block; overflow: visible; max-width: 100%; height: auto !important; }
+.glyph-line + .glyph-line { margin-top: -0.1em; }
+.glyph-name line, .glyph-name path, .glyph-name circle, .glyph-name rect { vector-effect: non-scaling-stroke; }
+.gl-hit { fill: transparent; }
+.gl-fill { fill: currentColor; opacity: 0; transition: opacity 0.35s; filter: drop-shadow(0 0 10px rgba(236, 233, 225, 0.18)); }
+.gl-hatch { color: var(--fg); opacity: 0; transition: opacity 0.35s; }
+.gl-line { fill: none; stroke: currentColor; stroke-width: 1.2; stroke-dasharray: 1; stroke-dashoffset: 1; }
+.gl-pts { opacity: 0; transition: opacity 0.3s; }
+.gl-pts line { stroke: var(--muted); stroke-width: 1; }
+.gl-pts circle { fill: var(--bg); stroke: var(--fg); stroke-width: 1; }
+.gl-pts rect { fill: var(--fg); stroke: var(--bg); stroke-width: 1; }
+.gl-guide { stroke: var(--line-strong); stroke-width: 1; stroke-dasharray: 1; stroke-dashoffset: 1; }
+.gl-tick { stroke: var(--line-strong); stroke-width: 1; opacity: 0; }
+.gl-label { font: 500 calc(62px * var(--u, 1))/1 var(--ff-mono), monospace; letter-spacing: 0.04em; fill: var(--muted); opacity: 0; transition: opacity 0.3s; }
+.gl-coord { fill: var(--fg); }
+.gl-info { fill: var(--fg); }
+
+/* Intro timeline (stagger by --i) */
+.glyph-name.is-intro .gl-guide { animation: gl-draw 0.9s var(--ease-out) forwards; }
+.glyph-name.is-intro .gl-tick, .glyph-name.is-intro .gl-label--guide { animation: gl-fade 0.4s 0.7s forwards; }
+.glyph-name.is-intro .gl-line { animation: gl-draw 1.1s var(--ease-inout) calc(0.15s + var(--i) * 0.09s) forwards; }
+.glyph-name.is-intro .gl-pts, .glyph-name.is-intro .gl-coord { animation: gl-pts 2.9s linear calc(var(--i) * 0.09s) forwards; }
+.glyph-name.is-intro .gl-hatch { animation: gl-hatch 1.4s linear calc(1.25s + var(--i) * 0.09s) forwards; }
+.glyph-name.is-intro .gl-fill { animation: gl-fill 0.5s steps(4) calc(2.2s + var(--i) * 0.09s) forwards; }
+@keyframes gl-draw { to { stroke-dashoffset: 0; } }
+@keyframes gl-fade { to { opacity: 1; } }
+@keyframes gl-pts { 0%, 14% { opacity: 0; } 24%, 80% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes gl-hatch {
+  0% { opacity: 0.9; clip-path: inset(0 100% 0 0); }
+  45% { opacity: 0.9; clip-path: inset(0 0 0 0); }
+  75% { opacity: 0.9; }
+  100% { opacity: 0; clip-path: inset(0 0 0 0); }
+}
+@keyframes gl-fill { from { opacity: 0; } to { opacity: 1; } }
+
+/* Settled: solid name, faint guides; hover a letter to inspect it */
+.glyph-name.is-done .gl-guide { stroke-dashoffset: 0; opacity: 0.6; }
+.glyph-name.is-done .gl-tick { opacity: 0.6; }
+.glyph-name.is-done .gl-label--guide { opacity: 0.55; }
+.glyph-name.is-done .gl-line { stroke-dashoffset: 0; }
+.glyph-name.is-done .gl-fill { opacity: 1; }
+.glyph-name.is-done .gl-glyph:hover .gl-fill { opacity: 0.06; }
+.glyph-name.is-done .gl-glyph:hover .gl-hatch { opacity: 0.45; }
+.glyph-name.is-done .gl-glyph:hover .gl-pts,
+.glyph-name.is-done .gl-glyph:hover .gl-coord,
+.glyph-name.is-done .gl-glyph:hover .gl-info { opacity: 1; }
+
+@media (max-width: 640px) { .gl-label { display: none; } }
+@media (prefers-reduced-motion: reduce) { .glyph-name * { animation: none !important; } }
+
+.ruler-sound {
+  position: absolute; bottom: 10px; left: 0; right: 0; pointer-events: auto; cursor: pointer;
+  writing-mode: vertical-rl; transform: rotate(180deg); padding: 6px 0;
+  font: 500 8px/1 var(--ff-mono), monospace; letter-spacing: 0.14em; color: var(--muted);
+  background: var(--bg); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+}
+.ruler-sound:hover, .ruler-sound[aria-pressed="true"] { color: var(--fg); }

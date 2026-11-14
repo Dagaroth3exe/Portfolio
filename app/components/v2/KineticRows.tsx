@@ -1,18 +1,21 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+
+// Module-level so the default is the same array every render
+const DEFAULT_FRACTIONS = [0.28, 0.5, 0.74, 1, 0.74, 0.5, 0.28];
 
 /**
  * Kinetic tagline rows: the same two-line statement repeated in a stepped
  * "V", each row revealing a different amount of it (as if mid-type). Rows
- * type in on mount, then highlight blocks hop between words — inverted
+ * type in when the block scrolls into view, then highlight blocks hop between words — inverted
  * ink/paper blocks rather than colour, to stay monochrome.
  *
  * Purely decorative: the real statement is given to screen readers once.
  */
 export default function KineticRows({
   lines,
-  fractions = [0.28, 0.5, 0.74, 1, 0.74, 0.5, 0.28],
+  fractions: fractionsProp = DEFAULT_FRACTIONS,
   className = "",
 }: {
   lines: [string, string];
@@ -20,6 +23,12 @@ export default function KineticRows({
   fractions?: number[];
   className?: string;
 }) {
+  // Stable by value: callers often pass an inline array (a new reference every
+  // render), which would otherwise restart the animation on every update.
+  const fkey = fractionsProp.join(",");
+  const fractions = useMemo(() => fkey.split(",").map(Number), [fkey]);
+  const root = useRef<HTMLDivElement>(null);
+  const [inView, setInView] = useState(false);
   const full = `${lines[0]}\n${lines[1]}`;
   const total = full.length;
   const mid = (fractions.length - 1) / 2;
@@ -37,7 +46,25 @@ export default function KineticRows({
   const [hl, setHl] = useState<number[][]>(() => fractions.map(() => []));
   const [tick, setTick] = useState(0);
 
+  // Start when the block is actually on screen
   useEffect(() => {
+    const el = root.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting) {
+          setInView(true);
+          io.disconnect();
+        }
+      },
+      { threshold: 0.25 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!inView) return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const targets = fractions.map((f) => Math.round(total * f));
     if (reduced) {
@@ -77,10 +104,10 @@ export default function KineticRows({
       cancelAnimationFrame(raf);
       window.clearInterval(id);
     };
-  }, [fractions, mid, total, words]);
+  }, [inView, fractions, mid, total, words]);
 
   return (
-    <div className={`kinetic ${className}`}>
+    <div ref={root} className={`kinetic ${className}`}>
       <p className="sr-only">{`${lines[0]} ${lines[1]}`}</p>
       {fractions.map((_, r) => {
         const n = typed[r] ?? 0;

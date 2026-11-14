@@ -74,7 +74,14 @@ export default function SkillsPipeline() {
     compute();
     const ro = new ResizeObserver(compute);
     ro.observe(el);
-    const io = new IntersectionObserver(([e]) => e.isIntersecting && setOn(true), { threshold: 0.25 });
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (!e.isIntersecting) return;
+        setOn(true);
+        io.disconnect();
+      },
+      { threshold: 0.25 },
+    );
     io.observe(el);
     return () => {
       ro.disconnect();
@@ -124,9 +131,9 @@ export default function SkillsPipeline() {
 function Node({ index, group, items, tone }: { index: number; group: string; items: string[]; tone: "paper" | "grey" | "ink" }) {
   const cls =
     tone === "ink"
-      ? "inv border-[var(--fg)]"
+      ? "bg-black border-[var(--fg)]"
       : tone === "grey"
-        ? "bg-[#cfcbc1] border-[var(--line-strong)]"
+        ? "bg-[var(--bg-2)] border-[var(--line-strong)]"
         : "bg-[var(--bg)] border-[var(--line-strong)]";
   return (
     <article className={`paper-grain relative border ${cls}`}>

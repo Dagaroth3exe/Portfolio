@@ -6,6 +6,7 @@ import { TransitionProvider } from "./components/Transition";
 import NavV2 from "./components/v2/NavV2";
 import IntroV2 from "./components/v2/IntroV2";
 import ThreeEgg from "./components/v2/ThreeEgg";
+import PageRulers from "./components/v2/PageRulers";
 
 const display = Archivo({
   subsets: ["latin"],
@@ -43,7 +44,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#050b18",
+  themeColor: "#0c0c0b",
   colorScheme: "dark",
 };
 
@@ -65,6 +66,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <IntroV2 />
         <ThreeEgg />
+        <PageRulers />
         <SmoothScroll>
           <TransitionProvider>
             <NavV2 />

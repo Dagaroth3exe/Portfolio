@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useReveals } from "../../lib/use-reveals";
 import { person, thesis } from "../../lib/content";
-import SectionHead from "../ui/SectionHead";
+import { SectionLabel } from "../v2/ProjectsDrawer";
 
 const GH_USER = "Dagaroth3exe";
 
@@ -61,7 +61,7 @@ export default function Thesis() {
   return (
     <section ref={root} id="thesis" data-pose="work" aria-labelledby="thesis-title" className="section">
       <div className="wrap">
-        <SectionHead n="00" label="In short" />
+        <SectionLabel n="00" title="In short" cmd="cat ./README.md" />
 
         <div className="mt-12 grid lg:grid-cols-12 gap-10 lg:gap-16">
           <h2 id="thesis-title" className="lg:col-span-6 display text-[clamp(2.6rem,5vw,5rem)]" data-split="lines">

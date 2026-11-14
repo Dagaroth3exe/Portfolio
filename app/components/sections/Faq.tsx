@@ -3,7 +3,7 @@
 import { useRef } from "react";
 import { useReveals } from "../../lib/use-reveals";
 import { faq } from "../../lib/content";
-import SectionHead from "../ui/SectionHead";
+import { SectionLabel } from "../v2/ProjectsDrawer";
 
 /** Plain-language Q&A — native <details>, so it works without JS and with keyboards. */
 export default function Faq() {
@@ -14,7 +14,7 @@ export default function Faq() {
     <section ref={root} id="faq" data-pose="work" aria-labelledby="faq-title" className="section">
       <div className="wrap grid lg:grid-cols-12 gap-10">
         <div className="lg:col-span-4">
-          <SectionHead n="05" label="Q&A" />
+          <SectionLabel n="FAQ" title="Q&A" cmd="man rishabh" />
           <h2 id="faq-title" className="display text-[clamp(3rem,6vw,6rem)] mt-12" data-split="lines">
             Ask me anything.
           </h2>

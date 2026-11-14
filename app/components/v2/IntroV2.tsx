@@ -1,23 +1,84 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import PixelThree from "./PixelThree";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { hero, person } from "../../lib/content";
 
 /**
- * Intro: blurred gradient beams (blue ↔ orange/red) rising on black — the only
- * place colour lives on the site — while the "3" resolves out of pixels and a
- * mono readout counts up. Then the whole frame pixel-dissolves away.
+ * Intro: an old-machine boot on a monochrome CRT.
  *
- * Shown once per session on the home page; the decision is made before first
- * paint by the inline script in the layout (adds `html.intro-on`). Any click
- * or key skips it. Never shown with reduced motion.
+ *   POST  → BIOS lines, memory count, services coming up, load bar
+ *   LOGIN → login lines, then the role typed big
+ *   HOBBY → hobbies stream in faster and faster until the counter overflows
+ *   HACK  → the screen gets "breached": shake, corrupted text, inverted bars
+ *   OFF   → the tube collapses to a line and the portfolio is underneath
+ *
+ * Everything is derived from elapsed time, so the sequence is deterministic.
+ * Shown once per session on the home page (the layout's inline script adds
+ * `html.intro-on` before first paint). Any click or key skips. Never shown
+ * with reduced motion.
  */
-const DURATION = 2300;
+
+const T = { login: 1550, role: 1850, hobby: 2450, hack: 4200, breach: 4450, granted: 4850, end: 5200 };
+const GLITCH = "█▓▒░#%&@$01<>/\\=+*?!";
+
+const POST: string[] = [
+  "RP3 BIOS v3.03   (C) 2003-2026 RP3 Systems",
+  "CPU0: NEURAL CORE-3 @ 3.00 GHz",
+  "@MEM",
+  "Detecting primary drive ..... /dev/brain0",
+  "Detecting secondary drive ... /dev/coffee",
+  "",
+  "[  OK  ] Mounted /home/rishabh",
+  "[  OK  ] Started llm-agents.service",
+  "[  OK  ] Started voice-pipeline.service",
+  "[  OK  ] Started vision.service",
+  "[  OK  ] Reached target portfolio.target",
+  "",
+  "@LOAD",
+];
+const LINE_MS = 85;
+
+/** Deterministic PRNG so the hobby stream is the same on every run. */
+function rng(seed: number) {
+  return () => {
+    seed = (seed * 1664525 + 1013904223) % 4294967296;
+    return seed / 4294967296;
+  };
+}
+
+function corrupt(s: string, p: number, r: () => number) {
+  if (p <= 0) return s;
+  let out = "";
+  for (const ch of s) out += ch !== " " && r() < p ? GLITCH[(r() * GLITCH.length) | 0] : ch;
+  return out;
+}
 
 export default function IntroV2() {
   const [gone, setGone] = useState(false);
+  const [t, setT] = useState(0);
   const root = useRef<HTMLDivElement>(null);
-  const pct = useRef<HTMLSpanElement>(null);
+
+  // Hobby stream: entries at accelerating intervals; later ones turn to cipher
+  const stream = useMemo(() => {
+    const r = rng(3);
+    const out: { at: number; text: string }[] = [];
+    let at = T.hobby + 350;
+    let dt = 150;
+    let i = 0;
+    while (at < T.hack) {
+      const k = (at - T.hobby) / (T.hack - T.hobby);
+      const real = hero.hobbies[i % hero.hobbies.length];
+      const cipher = r() < k * k * 1.2;
+      const text = cipher
+        ? Array.from({ length: 4 + ((r() * 9) | 0) }, () => GLITCH[(r() * GLITCH.length) | 0]).join("")
+        : real;
+      out.push({ at, text });
+      at += dt;
+      dt = Math.max(11, dt * 0.85);
+      i++;
+    }
+    return out;
+  }, []);
 
   useEffect(() => {
     const html = document.documentElement;
@@ -36,12 +97,12 @@ export default function IntroV2() {
       root.current?.classList.add("is-out");
       html.classList.remove("intro-on");
       window.dispatchEvent(new Event("introdone"));
-      window.setTimeout(() => setGone(true), 700);
+      window.setTimeout(() => setGone(true), 650);
     };
     const step = (now: number) => {
-      const k = Math.min(1, (now - t0) / DURATION);
-      if (pct.current) pct.current.textContent = String(Math.round(k * 100)).padStart(3, "0");
-      if (k < 1) raf = requestAnimationFrame(step);
+      const e = now - t0;
+      setT(e);
+      if (e < T.end) raf = requestAnimationFrame(step);
       else finish();
     };
     raf = requestAnimationFrame(step);
@@ -56,25 +117,124 @@ export default function IntroV2() {
 
   if (gone) return null;
 
+  const hacked = t >= T.hack;
+  const hk = hacked ? Math.min(1, (t - T.hack) / (T.end - T.hack)) : 0;
+  // Frame-seeded noise: new garbage every ~30ms, but render stays pure
+  const noise = rng(Math.floor(t / 30) + 7);
+  const c = (s: string) => corrupt(s, hacked ? 0.08 + hk * 0.7 : 0, noise);
+
+  // POST
+  const postShown = Math.min(POST.length, Math.floor(t / LINE_MS) + 1);
+  const memAt = 2 * LINE_MS;
+  const mem = Math.min(65536, Math.round(Math.max(0, (t - memAt) / 450) * 65536));
+  const loadAt = (POST.length - 1) * LINE_MS;
+  const load = Math.max(0, Math.min(1, (t - loadAt) / (T.login - 120 - loadAt)));
+  const BAR = 32;
+
+  // Login
+  const role = `> ${person.role.toUpperCase()}`;
+  const roleN = Math.max(0, Math.min(role.length, Math.floor((t - T.role) / 32)));
+
+  // Hobbies
+  const visible = stream.filter((s) => s.at <= t);
+  const current = visible[visible.length - 1];
+  const hk2 = Math.max(0, Math.min(1, (t - T.hobby - 350) / (T.hack - T.hobby - 350)));
+  const count = t >= T.hack - 120 ? "∞" : String(Math.round(Math.pow(10, hk2 * 4.2))).padStart(4, "0");
+
+  // Breach bars (random every frame)
+  const bars = hacked
+    ? Array.from({ length: 4 + ((hk * 8) | 0) }, () => ({
+        top: noise() * 100,
+        h: 0.6 + noise() * 9,
+        x: (noise() - 0.5) * 40,
+      }))
+    : [];
+
+  const date = new Date().toDateString();
+
   return (
-    <div ref={root} className="intro2 inv" role="status" aria-label="Loading">
-      <div className="intro2-beams" aria-hidden="true">
-        <span className="beam beam-a" />
-        <span className="beam beam-b" />
-        <span className="beam beam-c" />
+    <div ref={root} className={`boot ${hacked ? "is-hacked" : ""}`} role="status" aria-label={`Loading ${person.name}, ${person.role}`}>
+      <div className="boot-screen" aria-hidden="true">
+        {t < T.login ? (
+          <div>
+            {POST.slice(0, postShown).map((ln, i) => (
+              <div key={i} className="whitespace-pre">
+                {ln === "@MEM" ? (
+                  <>Memory test: {String(mem).padStart(5, " ")}K {mem >= 65536 ? "OK" : ""}</>
+                ) : ln === "@LOAD" ? (
+                  <>
+                    Loading portfolio [{"#".repeat(Math.round(load * BAR)).padEnd(BAR, ".")}] {Math.round(load * 100)}%
+                  </>
+                ) : ln.startsWith("[  OK  ]") ? (
+                  <>
+                    [  <span className="boot-ok">OK</span>  ]{ln.slice(8)}
+                  </>
+                ) : (
+                  ln || " "
+                )}
+              </div>
+            ))}
+            <span className="boot-cursor" />
+          </div>
+        ) : (
+          <div className="flex h-full flex-col">
+            <div className="boot-dim">
+              <div>{c(`rp3 login: rishabh`)}</div>
+              <div>{c(`Last login: ${date} on tty3`)}</div>
+            </div>
+
+            <div className="mt-[6vh]">
+              {/* The name lives in the hero; the boot screen only states the role */}
+              <div className="boot-role">
+                {c(role.slice(0, roleN))}
+                {t < T.hobby && <span className="boot-cursor" />}
+              </div>
+            </div>
+
+            {t >= T.hobby && (
+              <div className="mt-[5vh] min-h-0 flex-1 overflow-hidden">
+                <div className="flex flex-wrap items-baseline justify-between gap-4">
+                  <span>{c("> cat ~/hobbies.txt | wc -l")}</span>
+                  <span className="boot-count tabular-nums">[ {count} ]</span>
+                </div>
+                <div className="boot-current mt-3">
+                  {current ? c(current.text) : ""}
+                  <span className="boot-cursor" />
+                </div>
+                <p className="boot-stream mt-4">{c(visible.map((s) => s.text).join("  ·  "))}</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
-      <div className="relative z-10 flex h-full flex-col items-center justify-center gap-8">
-        <PixelThree className="w-[min(34vw,220px)] aspect-square" cell={7} shape="square" interactive={false} />
-        <div className="mono text-[11px] tracking-[0.12em] uppercase text-[var(--fg)] flex gap-6">
-          <span>Rishabh Parashar</span>
-          <span className="text-[var(--muted)]">AI Engineer</span>
-          <span className="tabular-nums">
-            <span ref={pct}>000</span>%
-          </span>
+
+      {/* Breach */}
+      {bars.map((b, i) => (
+        <span key={i} className="boot-bar" style={{ top: `${b.top}%`, height: `${b.h}%`, transform: `translateX(${b.x}px)` }} aria-hidden="true" />
+      ))}
+      {t >= T.breach && (
+        <div className="boot-alert" aria-hidden="true">
+          <div className="boot-alert-box">
+            {t < T.granted ? (
+              <>
+                <div>!! INTRUSION DETECTED !!</div>
+                <div className="boot-dim mt-1 text-[0.7em]">{corrupt("tty3 // signal hijacked // all sectors", 0.25, noise)}</div>
+              </>
+            ) : (
+              <>
+                <div>ACCESS GRANTED</div>
+                <div className="mt-1 text-[0.7em]">root@rp3 — welcome</div>
+              </>
+            )}
+          </div>
         </div>
-      </div>
-      {/* Pixel-dissolve exit mask */}
-      <div className="intro2-dissolve" aria-hidden="true" />
+      )}
+
+      <div className="boot-scan" aria-hidden="true" />
+      <div className="boot-vignette" aria-hidden="true" />
+      <p className="boot-skip" aria-hidden="true">
+        press any key to skip
+      </p>
     </div>
   );
 }

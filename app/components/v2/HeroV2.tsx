@@ -1,8 +1,9 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { hero, person } from "../../lib/content";
 import { TLink } from "../Transition";
-import GlitchText from "./GlitchText";
+import GlyphName from "./GlyphName";
 import KineticRows from "./KineticRows";
 import Measure from "./Measure";
 import PixelThree from "./PixelThree";
@@ -24,43 +25,39 @@ function tripleClick() {
 }
 
 export default function HeroV2() {
-  const statement = hero.statement.join(" ");
 
   return (
     <>
-      <section id="home" aria-labelledby="hero-title" className="inv relative min-h-[100svh] overflow-hidden">
-        {/* Blueprint grid */}
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.07]"
-          style={{
-            backgroundImage:
-              "linear-gradient(var(--fg) 1px, transparent 1px), linear-gradient(90deg, var(--fg) 1px, transparent 1px)",
-            backgroundSize: "48px 48px",
-          }}
-          aria-hidden="true"
-        />
+      <section id="home" aria-labelledby="hero-title" className="relative min-h-[100svh] overflow-hidden">
 
-        <div className="wrap relative flex min-h-[100svh] flex-col pt-[calc(var(--nav-h)+2.5rem)] pb-8">
+        <div className="wrap relative z-[2] flex min-h-[100svh] flex-col pt-[calc(var(--nav-h)+2.5rem)] pb-8">
           {/* File header */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mono text-[11px] uppercase tracking-[0.1em] text-[var(--muted)] border-y border-[var(--line)] py-3">
-            <span className="text-[var(--fg)]">File Nº 3</span>
+            <span className="text-[var(--fg)]">tty3 — rishabh@rp3</span>
             <span>{person.role}</span>
             <span className="hidden md:inline">Noida, IN · IST</span>
-            <span className="hidden md:inline text-right">Portfolio · 2026</span>
+            <span className="hidden md:inline text-right">
+              <Uptime />
+            </span>
           </div>
 
           <div className="grid flex-1 items-center gap-12 py-12 lg:grid-cols-12">
             <div className="lg:col-span-7">
-              <p className="mono text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">
-                {person.name} — {hero.kicker}
+              <p className="mono crt-glow text-[13px] text-[var(--fg)]" aria-hidden="true">
+                <span className="text-[var(--muted)]">rishabh@rp3:~$ </span>
+                <TypeOnce text="./whoami --verbose" />
+              </p>
+              <p className="mt-3 mono text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">
+                {hero.kicker}
               </p>
               <Measure axes="x" label={{ x: "W" }} className="mt-10 inline-block">
-                <h1 id="hero-title" className="display text-[clamp(3.4rem,8.6vw,9rem)] text-[var(--fg)]">
-                  <span className="sr-only">{person.name} — </span>
-                  <GlitchText text={statement} duration={900} />
+                <h1 id="hero-title" className="text-[22vw] lg:text-[clamp(3.4rem,12.4vw,12.4rem)]">
+                  <span className="sr-only">{person.name}</span>
+                  <GlyphName lines={[person.first, person.last]} />
                 </h1>
               </Measure>
               <p className="mt-10 max-w-xl text-[1.05rem] leading-relaxed text-[var(--fg-2)]">{hero.sub}</p>
+              <HobbyLine />
               <div className="mt-10 flex flex-wrap gap-3 mono text-[11px] uppercase tracking-[0.12em]">
                 <TLink href="#work" className="btn-v2 btn-v2--solid">
                   View work ↓
@@ -111,7 +108,7 @@ export default function HeroV2() {
       </section>
 
       {/* Kinetic statement band */}
-      <section className="inv border-t border-[var(--line)]" aria-label="Statement">
+      <section className="border-t border-[var(--line)]" aria-label="Statement">
         <div className="wrap py-16 md:py-24 overflow-hidden">
           <KineticRows
             className="text-[clamp(0.78rem,1.55vw,1.35rem)] text-[var(--fg)]"
@@ -120,5 +117,108 @@ export default function HeroV2() {
         </div>
       </section>
     </>
+  );
+}
+
+/** Live "uptime" since the page opened, like a terminal status bar. */
+function Uptime() {
+  const [s, setS] = useState(0);
+  useEffect(() => {
+    const t0 = Date.now();
+    const id = window.setInterval(() => setS(Math.floor((Date.now() - t0) / 1000)), 1000);
+    return () => window.clearInterval(id);
+  }, []);
+  const hh = String(Math.floor(s / 3600)).padStart(2, "0");
+  const mm = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
+  const ss = String(s % 60).padStart(2, "0");
+  return <span className="tabular-nums">up {hh}:{mm}:{ss}</span>;
+}
+
+/** Types a command once, after the boot intro (or straight away if there wasn't one). */
+function TypeOnce({ text }: { text: string }) {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    let id = 0;
+    const start = () => {
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return setN(text.length);
+      let i = 0;
+      id = window.setInterval(() => {
+        i++;
+        setN(i);
+        if (i >= text.length) window.clearInterval(id);
+      }, 45);
+    };
+    if (document.documentElement.classList.contains("intro-on")) {
+      window.addEventListener("introdone", start, { once: true });
+    } else start();
+    return () => {
+      window.removeEventListener("introdone", start);
+      window.clearInterval(id);
+    };
+  }, [text]);
+  return (
+    <>
+      {text.slice(0, n)}
+      {n < text.length && <span className="term-cursor" />}
+    </>
+  );
+}
+
+/** `> interests[3/10]: anime█` — types each hobby, holds, scrambles it away, next. */
+const SCRAMBLE = "█▓▒░#%&@$01<>/=+*";
+function HobbyLine() {
+  const list = hero.hobbies;
+  const [i, setI] = useState(0);
+  const [shown, setShown] = useState("");
+  const timer = useRef(0);
+
+  useEffect(() => {
+    const word = list[i];
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      timer.current = window.setTimeout(() => setShown(word), 0);
+      const next = window.setTimeout(() => setI((k) => (k + 1) % list.length), 2400);
+      return () => {
+        window.clearTimeout(timer.current);
+        window.clearTimeout(next);
+      };
+    }
+    let n = 0;
+    let phase: "type" | "hold" | "scramble" = "type";
+    let ticks = 0;
+    const tick = () => {
+      if (phase === "type") {
+        n++;
+        setShown(word.slice(0, n));
+        if (n >= word.length) phase = "hold";
+        timer.current = window.setTimeout(tick, phase === "hold" ? 1600 : 55);
+      } else if (phase === "hold") {
+        phase = "scramble";
+        tick();
+      } else {
+        ticks++;
+        setShown(
+          word
+            .split("")
+            .map((ch) => (ch === " " ? " " : SCRAMBLE[(Math.random() * SCRAMBLE.length) | 0]))
+            .join("")
+            .slice(0, Math.max(0, word.length - ticks * 2)),
+        );
+        if (ticks * 2 >= word.length) setI((k) => (k + 1) % list.length);
+        else timer.current = window.setTimeout(tick, 40);
+      }
+    };
+    timer.current = window.setTimeout(tick, 200);
+    return () => window.clearTimeout(timer.current);
+  }, [i, list]);
+
+  return (
+    <p className="mt-6 mono crt-glow text-[13px] text-[var(--fg)]">
+      <span className="text-[var(--muted)]">
+        &gt; interests[{i + 1}/{list.length}]:{" "}
+      </span>
+      <span aria-hidden="true">{shown}</span>
+      <span className="term-cursor" aria-hidden="true" />
+      <span className="sr-only">Interests: {list.join(", ")}</span>
+    </p>
   );
 }

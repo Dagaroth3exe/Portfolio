@@ -100,11 +100,16 @@ export default function ProjectsDrawer() {
   );
 }
 
-export function SectionLabel({ n, title, note }: { n: string; title: string; note?: string }) {
+/** `§ 01  rishabh@rp3:~$ cd ./work█ ──── note` — section labels read as shell prompts. */
+export function SectionLabel({ n, title, note, cmd }: { n: string; title: string; note?: string; cmd?: string }) {
   return (
     <div className="flex items-center gap-4 mono text-[11px] uppercase tracking-[0.12em] text-[var(--muted)]">
       <span className="text-[var(--fg)]">§ {n}</span>
-      <span>{title}</span>
+      <span>
+        <span className="text-[var(--dim)] normal-case">rishabh@rp3:~$</span> <span className="normal-case">{cmd ?? `cd ./${title.toLowerCase()}`}</span>
+        <span className="sr-only"> — {title}</span>
+        <span className="term-cursor ml-1 opacity-70" aria-hidden="true" />
+      </span>
       <span className="h-px flex-1 bg-[var(--line-strong)]" />
       {note && <span>{note}</span>}
     </div>

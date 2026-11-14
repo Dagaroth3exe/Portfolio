@@ -24,6 +24,8 @@ export default function PixelThree({
   interactive = true,
   padding = 0.08,
   glyph = "emblem",
+  fill,
+  outline,
 }: {
   className?: string;
   /** Grid pitch in CSS px. */
@@ -35,8 +37,14 @@ export default function PixelThree({
   padding?: number;
   /** "emblem" = the signature 3; "alt" = the second 3 from three-alt.ts (easter egg). */
   glyph?: "emblem" | "alt";
+  /** Fill colour; defaults to the surrounding text colour. */
+  fill?: string;
+  /** A ring of `width` cells around the shape, in `color`. */
+  outline?: { color: string; width: number };
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
+  const ow = outline?.width ?? 0;
+  const ocolor = outline?.color ?? "";
 
   useEffect(() => {
     const cv = canvas.current;
@@ -54,6 +62,7 @@ export default function PixelThree({
     let cols = 0;
     let rows = 0;
     let mask: Uint8Array = new Uint8Array(0);
+    let ring: Uint8Array = new Uint8Array(0);
     let seed: Float32Array = new Float32Array(0);
     let color = "#121212";
     let raf = 0;
@@ -96,9 +105,24 @@ export default function PixelThree({
       cols = s.c;
       rows = s.r;
       mask = s.m;
+      // Outline ring: empty cells within `ow` cells (square neighbourhood) of the shape
+      ring = new Uint8Array(cols * rows);
+      if (ow > 0)
+        for (let r = 0; r < rows; r++)
+          for (let c = 0; c < cols; c++) {
+            if (mask[r * cols + c]) continue;
+            search: for (let dr = -ow; dr <= ow; dr++)
+              for (let dc = -ow; dc <= ow; dc++) {
+                const rr = r + dr, cc = c + dc;
+                if (rr >= 0 && rr < rows && cc >= 0 && cc < cols && mask[rr * cols + cc]) {
+                  ring[r * cols + c] = 1;
+                  break search;
+                }
+              }
+          }
       seed = new Float32Array(cols * rows);
       for (let i = 0; i < seed.length; i++) seed[i] = Math.random();
-      color = getComputedStyle(cv).color || color;
+      color = fill ?? (getComputedStyle(cv).color || color);
     };
 
     const draw = (now: number) => {
@@ -139,15 +163,17 @@ export default function PixelThree({
           const sr = coarse > 1 ? Math.floor(r / coarse) * coarse : r;
           const i = r * cols + c;
           let on = mask[sr * cols + sc] === 1;
+          const edge = !on && ring[sr * cols + sc] === 1;
           const inFlash = glitching && c >= flash.c0 && c < flash.c0 + flash.w && r >= flash.r0 && r < flash.r0 + flash.h;
           if (inFlash) on = !on;
-          if (!on) continue;
+          if (!on && !edge) continue;
+          ctx.fillStyle = on ? color : ocolor;
           if (glitching && seed[i] > 0.93) continue; // dropouts
           const x = (c + dx + 0.5) * pr;
           const y = (r + 0.5) * pr;
           // Pointer sparkle
           let k = 1;
-          let a = 0.88;
+          let a = edge ? 1 : 0.88;
           if (interactive) {
             const d = Math.hypot(x - pointer.x, y - pointer.y);
             if (d < 90) {
@@ -207,7 +233,7 @@ export default function PixelThree({
       window.removeEventListener("pointermove", onMove);
       cv.removeEventListener("pointerleave", onLeave);
     };
-  }, [cell, shape, glitch, interactive, padding, glyph]);
+  }, [cell, shape, glitch, interactive, padding, glyph, fill, ow, ocolor]);
 
   return <canvas ref={canvas} className={`block text-[var(--fg)] ${className}`} aria-hidden="true" />;
 }

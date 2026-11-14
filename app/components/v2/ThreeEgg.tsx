@@ -102,7 +102,16 @@ export default function ThreeEgg() {
           </figcaption>
         </figure>
         <figure className="flex flex-col items-center gap-5">
-          <PixelThree className="aspect-square w-[min(36vw,360px)]" cell={9} shape="square" glyph="alt" interactive={false} />
+          <PixelThree
+            className="aspect-square w-[min(36vw,360px)]"
+            cell={9}
+            shape="square"
+            glyph="alt"
+            interactive={false}
+            padding={0.12}
+            fill="#e10600"
+            outline={{ color: "#16207a", width: 2 }}
+          />
           <figcaption className="text-center mono text-[11px] uppercase tracking-[0.1em]">
             <span className="block text-[var(--fg)]">Nº 3 — M. Verstappen</span>
             <span className="text-[var(--muted)]">Racing driver</span>

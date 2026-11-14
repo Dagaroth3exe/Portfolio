@@ -33,7 +33,7 @@ export default function ContactTestPage() {
           <GlitchText text={contact.headline.join(" ")} />
         </h2>
 
-        <div className="paper-grain relative mt-16 border border-[var(--line-strong)] bg-[#f3f1ec] p-5 md:p-10">
+        <div className="paper-grain relative mt-16 border border-[var(--line-strong)] bg-[var(--bg-2)] p-5 md:p-10">
           <RegMark className="absolute left-3 top-3" />
           <RegMark className="absolute right-3 top-3" />
           <RegMark className="absolute bottom-3 left-3" />
@@ -49,7 +49,7 @@ export default function ContactTestPage() {
                 {[0, 1, 2, 3, 4].map((i) => (
                   <span key={i} style={{ background: `linear-gradient(180deg, rgba(18,18,18,${0.95 - i * 0.16}), rgba(18,18,18,0.04))` }} />
                 ))}
-                <LogoMark className="absolute left-1/2 top-1/2 h-[78%] w-auto -translate-x-1/2 -translate-y-1/2 mix-blend-multiply opacity-80" color="#121212" />
+                <LogoMark className="absolute left-1/2 top-1/2 h-[78%] w-auto -translate-x-1/2 -translate-y-1/2 opacity-80" color="var(--fg)" />
               </div>
             </Panel>
 
@@ -79,8 +79,8 @@ export default function ContactTestPage() {
 
           {/* Pencil scribbles */}
           <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 1000 600" preserveAspectRatio="none" aria-hidden="true">
-            <path d="M840 70 C 900 40, 960 110, 905 140 C 850 170, 820 90, 880 80 C 940 70, 950 150, 890 160" fill="none" stroke="#121212" strokeOpacity="0.45" strokeWidth="1.4" />
-            <path d="M60 520 c 40 -30 90 20 50 40 c -40 20 -70 -40 -10 -50 c 60 -10 80 50 20 60 c -50 10 -60 -30 -20 -40" fill="none" stroke="#121212" strokeOpacity="0.4" strokeWidth="1.3" />
+            <path d="M840 70 C 900 40, 960 110, 905 140 C 850 170, 820 90, 880 80 C 940 70, 950 150, 890 160" fill="none" stroke="var(--fg)" strokeOpacity="0.45" strokeWidth="1.4" />
+            <path d="M60 520 c 40 -30 90 20 50 40 c -40 20 -70 -40 -10 -50 c 60 -10 80 50 20 60 c -50 10 -60 -30 -20 -40" fill="none" stroke="var(--fg)" strokeOpacity="0.4" strokeWidth="1.3" />
           </svg>
 
           {/* The actual contact */}
@@ -140,9 +140,9 @@ function Panel({ label, className = "", children }: { label: string; className?:
 function RegMark({ className = "" }: { className?: string }) {
   return (
     <svg viewBox="0 0 20 20" className={`h-4 w-4 ${className}`} aria-hidden="true">
-      <circle cx="10" cy="10" r="5" fill="none" stroke="#121212" strokeWidth="1" />
-      <line x1="0" y1="10" x2="20" y2="10" stroke="#121212" strokeWidth="1" />
-      <line x1="10" y1="0" x2="10" y2="20" stroke="#121212" strokeWidth="1" />
+      <circle cx="10" cy="10" r="5" fill="none" stroke="var(--fg)" strokeWidth="1" />
+      <line x1="0" y1="10" x2="20" y2="10" stroke="var(--fg)" strokeWidth="1" />
+      <line x1="10" y1="0" x2="10" y2="20" stroke="var(--fg)" strokeWidth="1" />
     </svg>
   );
 }
@@ -164,7 +164,7 @@ export function FooterV2() {
 }
 
 /* ---------- Interest panels: original ink line art, no marks or characters ---------- */
-const INK = "#121212";
+const INK = "var(--fg)";
 
 /** Motorsport: checkered strip + a speed trace through one lap, with braking dips and sector ticks. */
 function MotorsportArt() {
@@ -195,7 +195,7 @@ function MotorsportArt() {
       <polyline points={pts} fill="none" stroke={INK} strokeWidth="1.6" strokeLinejoin="round" />
       {/* Braking zones */}
       {[4, 10, 15].map((i) => (
-        <circle key={i} cx={x0 + (i / (v.length - 1)) * w} cy={96 - v[i] * 74} r="2.6" fill="#f3f1ec" stroke={INK} strokeWidth="1.1" />
+        <circle key={i} cx={x0 + (i / (v.length - 1)) * w} cy={96 - v[i] * 74} r="2.6" fill="var(--bg-2)" stroke={INK} strokeWidth="1.1" />
       ))}
       <text x={x0 + w} y="106" textAnchor="end" fontSize="7" fill={INK} style={{ fontFamily: "var(--ff-mono), monospace" }}>LAP · v(t)</text>
     </svg>
@@ -223,12 +223,12 @@ function AnimeArt() {
       </defs>
       <g clipPath="url(#anime-clip)">
         {rays.map((r, i) => (
-          <line key={i} x1={r.x1} y1={r.y1} x2={r.x2} y2={r.y2} stroke={INK} strokeWidth={r.w} />
+          <line key={i} x1={r.x1.toFixed(2)} y1={r.y1.toFixed(2)} x2={r.x2.toFixed(2)} y2={r.y2.toFixed(2)} stroke={INK} strokeWidth={r.w} />
         ))}
         {/* Halftone tone patch */}
         <rect x="0" y="78" width="70" height="32" fill="url(#tone)" opacity="0.8" />
         {/* Spiky shout bubble */}
-        <path d="M120 30 l8 9 12 -4 -2 12 12 6 -12 6 3 12 -12 -3 -7 10 -6 -10 -12 3 3 -12 -12 -6 12 -6 -2 -12 12 4 z" fill="#f3f1ec" stroke={INK} strokeWidth="1.4" />
+        <path d="M120 30 l8 9 12 -4 -2 12 12 6 -12 6 3 12 -12 -3 -7 10 -6 -10 -12 3 3 -12 -12 -6 12 -6 -2 -12 12 4 z" fill="var(--bg-2)" stroke={INK} strokeWidth="1.4" />
         <text x="121" y="61" textAnchor="middle" fontSize="15" fontWeight="700" fill={INK} style={{ fontFamily: "var(--ff-body), sans-serif" }}>!?</text>
         {/* Sparkles */}
         {[
@@ -256,7 +256,7 @@ function JapanArt() {
       <circle cx="104" cy="34" r="16" fill={INK} />
       {/* Fuji: halftone body, snow cap with a jagged line */}
       <path d="M8 100 L66 36 C70 32 76 32 80 36 L138 100 Z" fill="url(#fuji-tone)" stroke={INK} strokeWidth="1.2" />
-      <path d="M57 46 L66 36 C70 32 76 32 80 36 L89 46 L83 52 L77 45 L71 53 L65 46 L60 51 Z" fill="#f3f1ec" stroke={INK} strokeWidth="1.1" />
+      <path d="M57 46 L66 36 C70 32 76 32 80 36 L89 46 L83 52 L77 45 L71 53 L65 46 L60 51 Z" fill="var(--bg-2)" stroke={INK} strokeWidth="1.1" />
       <line x1="4" y1="100" x2="140" y2="100" stroke={INK} strokeWidth="1" />
       {/* 三 — three brush strokes, drawn (no font needed) */}
       <g fill={INK}>
