@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { hero, person } from "../../lib/content";
+import { bootAudio, bootFadeOut, sfx } from "../../lib/bootSfx";
 
 /**
  * Intro: an old-machine boot on a monochrome CRT.
@@ -13,6 +14,11 @@ import { hero, person } from "../../lib/content";
  *   OFF   → the tube collapses to a line and the portfolio is underneath
  *
  * Everything is derived from elapsed time, so the sequence is deterministic.
+ *
+ * Sound: browsers only allow audio after a key/click, so the boot waits on a
+ * power-on screen ("press any key to boot"); that press starts the machine
+ * with synthesised sfx (app/lib/bootSfx.ts). Esc on that screen skips. If the
+ * visitor muted site sounds before, it boots straight away, silently.
  * Shown once per session on the home page (the layout's inline script adds
  * `html.intro-on` before first paint). Any click or key skips. Never shown
  * with reduced motion.
@@ -60,12 +66,13 @@ function corrupt(s: string, p: number, r: () => number) {
 export default function IntroV2() {
   const [gone, setGone] = useState(false);
   const [t, setT] = useState(0);
+  const [phase, setPhase] = useState<"gate" | "run">("gate");
   const root = useRef<HTMLDivElement>(null);
 
   // Hobby stream: entries at accelerating intervals; later ones turn to cipher
   const stream = useMemo(() => {
     const r = rng(3);
-    const out: { at: number; text: string }[] = [];
+    const out: { at: number; text: string; cipher: boolean; k: number }[] = [];
     let at = T.hobby + 350;
     let dt = 150;
     let i = 0;
@@ -76,7 +83,7 @@ export default function IntroV2() {
       const text = cipher
         ? Array.from({ length: 4 + ((r() * 9) | 0) }, () => GLITCH[(r() * GLITCH.length) | 0]).join("")
         : real;
-      out.push({ at, text });
+      out.push({ at, text, cipher, k });
       at += dt;
       dt = Math.max(11, dt * 0.85);
       i++;
@@ -88,13 +95,47 @@ export default function IntroV2() {
     const html = document.documentElement;
     if (!html.classList.contains("intro-on")) return;
     let finished = false;
+    let started = false;
+    let silent = true;
     let raf = 0;
-    const t0 = performance.now();
+    let t0 = 0;
+    const timers: number[] = [];
+
+    // Sound cues on the same clock as the visuals
+    const cues: { at: number; fn: () => void }[] = [];
+    POST.forEach((ln, i) => {
+      const at = i * LINE_MS;
+      if (!ln) return;
+      if (ln === "@MEM") cues.push({ at, fn: () => sfx.memory(450) });
+      else if (ln === "@LOAD") return;
+      else if (ln.startsWith("Detecting")) cues.push({ at, fn: sfx.drive });
+      else if (ln.startsWith("[  OK")) cues.push({ at, fn: () => (sfx.line(i), sfx.ok()) });
+      else cues.push({ at, fn: () => sfx.line(i) });
+    });
+    cues.push({ at: T.login, fn: () => sfx.line(0) }, { at: T.login + 70, fn: () => sfx.line(2) });
+    for (let i = 1; i <= ROLE_A.length; i++) cues.push({ at: T.role + i * 34, fn: sfx.key });
+    for (let j = 0; j < 3; j++) cues.push({ at: T.role + R.dots + j * 120, fn: sfx.dot });
+    cues.push({ at: T.role + R.crash, fn: sfx.crash });
+    for (let at = T.role + R.erase; at < T.role + R.retype; at += 24) cues.push({ at, fn: sfx.erase });
+    cues.push({ at: T.role + R.retype, fn: sfx.land });
+    for (let i = 1; i <= ROLE_B.length - 2; i++) cues.push({ at: T.role + R.retype + i * 34, fn: sfx.key });
+    cues.push({ at: T.hobby, fn: () => sfx.line(4) });
+    stream.forEach((s) => cues.push({ at: s.at, fn: () => sfx.stream(s.k, s.cipher) }));
+    cues.push({ at: T.hack, fn: sfx.hack }, { at: T.breach, fn: () => sfx.alarm(T.granted - T.breach) }, { at: T.granted, fn: sfx.granted });
+    cues.sort((x, y) => x.at - y.at);
+    let ci = 0;
 
     const finish = () => {
       if (finished) return;
       finished = true;
       cancelAnimationFrame(raf);
+      timers.forEach((id) => window.clearTimeout(id));
+      removeGate();
+      removeSkip();
+      if (!silent) {
+        sfx.off();
+        bootFadeOut(1800);
+      }
       try {
         sessionStorage.setItem("intro-seen", "1");
       } catch {}
@@ -105,21 +146,67 @@ export default function IntroV2() {
     };
     const step = (now: number) => {
       const e = now - t0;
+      if (!silent) while (ci < cues.length && cues[ci].at <= e) cues[ci++].fn();
       setT(e);
       if (e < T.end) raf = requestAnimationFrame(step);
       else finish();
     };
-    raf = requestAnimationFrame(step);
-    window.addEventListener("keydown", finish, { once: true });
-    window.addEventListener("pointerdown", finish, { once: true });
+    const skipEvents = ["keydown", "pointerdown"] as const;
+    const removeSkip = () => skipEvents.forEach((ev) => window.removeEventListener(ev, finish));
+    const start = (withSound: boolean) => {
+      if (started || finished) return;
+      started = true;
+      removeGate();
+      silent = !withSound;
+      if (withSound && bootAudio()) sfx.powerOn();
+      setPhase("run");
+      t0 = performance.now() + 120;
+      raf = requestAnimationFrame(step);
+      // Arm skip a beat later so the press that booted doesn't also skip
+      timers.push(window.setTimeout(() => skipEvents.forEach((ev) => window.addEventListener(ev, finish, { once: true })), 450));
+    };
+
+    // Power-on screen: the first key/click boots with sound, Esc skips
+    const onGate = (e: Event) => {
+      if (e instanceof KeyboardEvent && e.key === "Escape") return finish();
+      if ((e.target as Element | null)?.closest?.(".boot-gate-skip")) return finish();
+      start(true);
+    };
+    const removeGate = () => skipEvents.forEach((ev) => window.removeEventListener(ev, onGate));
+    let muted = false;
+    try {
+      muted = localStorage.getItem("ruler-sound") === "off";
+    } catch {}
+    if (muted) raf = requestAnimationFrame(() => start(false));
+    else skipEvents.forEach((ev) => window.addEventListener(ev, onGate));
+
     return () => {
       cancelAnimationFrame(raf);
-      window.removeEventListener("keydown", finish);
-      window.removeEventListener("pointerdown", finish);
+      timers.forEach((id) => window.clearTimeout(id));
+      removeGate();
+      removeSkip();
     };
-  }, []);
+  }, [stream]);
 
   if (gone) return null;
+
+  if (phase === "gate")
+    return (
+      <div ref={root} className="boot" role="dialog" aria-label={`${person.name}, ${person.role}. Press any key to boot with sound, or Escape to skip`}>
+        <div className="boot-gate">
+          <div className="boot-dim">RP3-3000 // tty3 // standby</div>
+          <button type="button" className="boot-gate-btn" autoFocus>
+            <span className="boot-led" aria-hidden="true" />[ PRESS ANY KEY TO BOOT ]
+          </button>
+          <div className="boot-dim">♪ sound on · headphones recommended</div>
+          <button type="button" className="boot-gate-skip">
+            skip intro [esc]
+          </button>
+        </div>
+        <div className="boot-scan" aria-hidden="true" />
+        <div className="boot-vignette" aria-hidden="true" />
+      </div>
+    );
 
   const hacked = t >= T.hack;
   const hk = hacked ? Math.min(1, (t - T.hack) / (T.end - T.hack)) : 0;
