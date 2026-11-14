@@ -158,7 +158,11 @@ export default function IntroV2() {
       started = true;
       removeGate();
       silent = !withSound;
-      if (withSound && bootAudio()) sfx.powerOn();
+      if (withSound) {
+        const ac = bootAudio();
+        // Cues before the context is running are dropped, so wait for it
+        if (ac) (ac.state === "running" ? Promise.resolve() : ac.resume()).then(sfx.powerOn, () => {});
+      }
       setPhase("run");
       t0 = performance.now() + 120;
       raf = requestAnimationFrame(step);
@@ -172,13 +176,16 @@ export default function IntroV2() {
       if ((e.target as Element | null)?.closest?.(".boot-gate-skip")) return finish();
       start(true);
     };
-    const removeGate = () => skipEvents.forEach((ev) => window.removeEventListener(ev, onGate));
+    // Phones only allow audio once the finger lifts (pointerup / click), never on
+    // pointerdown, so the boot press is taken on release.
+    const gateEvents = ["keydown", "pointerup"] as const;
+    const removeGate = () => gateEvents.forEach((ev) => window.removeEventListener(ev, onGate));
     let muted = false;
     try {
       muted = localStorage.getItem("ruler-sound") === "off";
     } catch {}
     if (muted) raf = requestAnimationFrame(() => start(false));
-    else skipEvents.forEach((ev) => window.addEventListener(ev, onGate));
+    else gateEvents.forEach((ev) => window.addEventListener(ev, onGate));
 
     return () => {
       cancelAnimationFrame(raf);

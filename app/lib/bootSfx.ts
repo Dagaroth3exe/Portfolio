@@ -35,6 +35,11 @@ export function bootAudio() {
   }
   const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
   if (!AC) return null;
+  // iOS: play through the ringer/silent switch like media, not as UI sound
+  try {
+    const nav = navigator as Navigator & { audioSession?: { type: string } };
+    if (nav.audioSession) nav.audioSession.type = "playback";
+  } catch {}
   const c = new AC();
   ctx = c;
   const comp = c.createDynamicsCompressor();
